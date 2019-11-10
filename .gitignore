@@ -3,3 +3,4 @@ mnist_data
 .mypy_cache
 *.pyc
 .vscode/settings.json
+images/
