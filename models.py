@@ -77,7 +77,9 @@ class RealNVPLayer(nn.Module):
 class PermLayer(nn.Module):
     def __init__(self, z_dim):
         super().__init__()
-        self.perm = nn.Parameter(torch.from_numpy(np.random.permutation(z_dim)), requires_grad=False)
+        self.perm = nn.Parameter(
+            torch.from_numpy(np.random.permutation(z_dim)), requires_grad=False
+        )
 
     def forward(self, z):
         #### Assumes z is (batch, z_dim) !!
@@ -104,19 +106,20 @@ class Flow(nn.Module):
             layers.append(PermLayer(z_dim))
         self.net = nn.Sequential(*layers)
 
-    def forward(self,z):
+    def forward(self, z):
         return self.net(z)
 
-    def inverse(self,z):
+    def inverse(self, z):
         for l in net:
             z = l.inverse(z)
         return z
 
-    def jacobian(self,z):
+    def jacobian(self, z):
         J = 1.0
         for l in net:
             J *= l.jacobian(z)
         return J
+
 
 class Discriminator(nn.Module):
     def __init__(self, z_dim, n_units):
@@ -132,4 +135,3 @@ class Discriminator(nn.Module):
 
     def forward(self, z):
         return self.net(z)
-

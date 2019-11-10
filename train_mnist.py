@@ -42,7 +42,7 @@ ed_optimizer = optim.Adam(
     list(encoder.parameters()) + list(decoder.parameters()), lr=1e-3
 )
 
-for e in range(1,num_epochs+1):
+for e in range(1, num_epochs + 1):
     for batch in train_loader:
         encoder.train()
         decoder.train()
@@ -98,6 +98,8 @@ for e in range(1,num_epochs+1):
     with torch.no_grad():
         z = flow(torch.rand(200, z_dim).to(device))
         images = torch.bernoulli(torch.sigmoid(decoder(z)))
-    images_tiled = np.reshape(np.transpose(np.reshape(images.cpu().detach(), (10,20,28,28)), (0,2,1,3)), (280,560))
-    plt.imsave('images/{}.png'.format(e), images_tiled, cmap='gray')
-
+    images_tiled = np.reshape(
+        np.transpose(np.reshape(images.cpu().detach(), (10, 20, 28, 28)), (0, 2, 1, 3)),
+        (280, 560),
+    )
+    plt.imsave("images/{}.png".format(e), images_tiled, cmap="gray")
