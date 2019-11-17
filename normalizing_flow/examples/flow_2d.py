@@ -14,19 +14,22 @@ from nf.models import NormalizingFlowModel
 
 
 def gen_data(n=512):
-    return np.r_[np.random.randn(n // 3, 2) + np.array([0, 6]),
-                 np.random.randn(n // 3, 2) + np.array([2.5, 3]),
-                 np.random.randn(n // 3, 2) + np.array([-2.5, 3])]
+    return np.r_[
+        np.random.randn(n // 3, 2) + np.array([0, 6]),
+        np.random.randn(n // 3, 2) + np.array([2.5, 3]),
+        np.random.randn(n // 3, 2) + np.array([-2.5, 3]),
+    ]
 
 
 def gen_mixture_data(n=512):
-    return np.r_[np.random.randn(n // 2, 2) + np.array([5, 3]),
-                 np.random.randn(n // 2, 2) + np.array([-5, 3])]
-
+    return np.r_[
+        np.random.randn(n // 2, 2) + np.array([5, 3]),
+        np.random.randn(n // 2, 2) + np.array([-5, 3]),
+    ]
 
 
 def plot_data(x, **kwargs):
-    plt.scatter(x[:,0], x[:,1], marker="x", **kwargs)
+    plt.scatter(x[:, 0], x[:, 1], marker="x", **kwargs)
     plt.xlim((-3, 3))
     plt.ylim((-3, 3))
 
@@ -64,7 +67,7 @@ if __name__ == "__main__":
         x = torch.Tensor(gen_data(args.n))
 
     for i in range(x.shape[1]):
-        x[:,i] = (x[:,i] - torch.mean(x[:,i])) / torch.std(x[:,i])
+        x[:, i] = (x[:, i] - torch.mean(x[:, i])) / torch.std(x[:, i])
 
     for i in range(args.iterations):
         optimizer.zero_grad()
@@ -74,10 +77,12 @@ if __name__ == "__main__":
         loss.backward()
         optimizer.step()
         if i % 100 == 0:
-            logger.info(f"Iter: {i}\t" +
-                        f"Logprob: {logprob.mean().data:.2f}\t" +
-                        f"Prior: {prior_logprob.mean().data:.2f}\t" +
-                        f"LogDet: {log_det.mean().data:.2f}")
+            logger.info(
+                f"Iter: {i}\t"
+                + f"Logprob: {logprob.mean().data:.2f}\t"
+                + f"Prior: {prior_logprob.mean().data:.2f}\t"
+                + f"LogDet: {log_det.mean().data:.2f}"
+            )
 
     plt.figure(figsize=(8, 3))
     plt.subplot(1, 3, 1)
@@ -97,4 +102,3 @@ if __name__ == "__main__":
         x = f(x)[0].data
         plot_data(x, color="black", alpha=0.5)
         plt.show()
-

@@ -16,11 +16,14 @@ from nf.models import NormalizingFlowModel
 
 
 def gen_data(n=512):
-    return np.r_[np.random.randn(n // 2, 1) + np.array([2]),
-                 np.random.randn(n // 2, 1) + np.array([-2])]
+    return np.r_[
+        np.random.randn(n // 2, 1) + np.array([2]),
+        np.random.randn(n // 2, 1) + np.array([-2]),
+    ]
 
-def plot_data(x, bandwidth = 0.2, **kwargs):
-    kde = sp.stats.gaussian_kde(x[:,0])
+
+def plot_data(x, bandwidth=0.2, **kwargs):
+    kde = sp.stats.gaussian_kde(x[:, 0])
     x_axis = np.linspace(-5, 5, 200)
     plt.plot(x_axis, kde(x_axis), **kwargs)
 
@@ -45,11 +48,11 @@ if __name__ == "__main__":
     optimizer = optim.Adam(model.parameters(), lr=0.005)
     x = torch.Tensor(gen_data(args.n))
 
-    plot_data(x, color = "black")
+    plot_data(x, color="black")
     plt.show()
 
     for i in range(x.shape[1]):
-        x[:,i] = (x[:,i] - torch.mean(x[:,i])) / torch.std(x[:,i])
+        x[:, i] = (x[:, i] - torch.mean(x[:, i])) / torch.std(x[:, i])
 
     for i in range(args.iterations):
         optimizer.zero_grad()
@@ -59,10 +62,12 @@ if __name__ == "__main__":
         loss.backward()
         optimizer.step()
         if i % 100 == 0:
-            logger.info(f"Iter: {i}\t" +
-                        f"Logprob: {logprob.mean().data:.2f}\t" +
-                        f"Prior: {prior_logprob.mean().data:.2f}\t" +
-                        f"LogDet: {log_det.mean().data:.2f}")
+            logger.info(
+                f"Iter: {i}\t"
+                + f"Logprob: {logprob.mean().data:.2f}\t"
+                + f"Prior: {prior_logprob.mean().data:.2f}\t"
+                + f"LogDet: {log_det.mean().data:.2f}"
+            )
 
     plt.figure(figsize=(8, 3))
     plt.subplot(1, 3, 1)
