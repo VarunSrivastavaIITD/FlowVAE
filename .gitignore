@@ -4,3 +4,7 @@ mnist_data
 *.pyc
 .vscode/
 images/
+data/
+normalizingflow/svgs/
+results/
+vaebase/
