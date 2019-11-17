@@ -5,6 +5,7 @@ from tqdm import tqdm
 from pprint import pprint
 from torchvision import datasets, transforms
 import matplotlib.pyplot as plt
+import os
 import models
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -102,4 +103,5 @@ for e in range(1, num_epochs + 1):
         np.transpose(np.reshape(images.cpu().detach(), (10, 20, 28, 28)), (0, 2, 1, 3)),
         (280, 560),
     )
+    os.makedirs("images", exist_ok=True)
     plt.imsave("images/{}.png".format(e), images_tiled, cmap="gray")
