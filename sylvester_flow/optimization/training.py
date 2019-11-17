@@ -2,9 +2,9 @@ from __future__ import print_function
 import torch
 
 from torch.autograd import Variable
-from optimization.loss import calculate_loss
-from utils.visual_evaluation import plot_reconstructions
-from utils.log_likelihood import calculate_likelihood
+from .loss import calculate_loss
+from ..utils.visual_evaluation import plot_reconstructions
+from ..utils.log_likelihood import calculate_likelihood
 
 import numpy as np
 

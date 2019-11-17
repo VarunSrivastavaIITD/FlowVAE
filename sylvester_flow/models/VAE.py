@@ -3,8 +3,8 @@ from __future__ import print_function
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-import models.flows as flows
-from models.layers import GatedConv2d, GatedConvTranspose2d
+from . import flows
+from .layers import GatedConv2d, GatedConvTranspose2d
 
 
 class VAE(nn.Module):

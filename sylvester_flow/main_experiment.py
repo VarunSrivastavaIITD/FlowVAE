@@ -15,10 +15,10 @@ import os
 
 import datetime
 
-import models.VAE as VAE
-from optimization.training import train, evaluate
-from utils.load_data import load_dataset
-from utils.plotting import plot_training_curve
+from .models import VAE
+from .optimization.training import train, evaluate
+from .utils.load_data import load_dataset
+from .utils.plotting import plot_training_curve
 
 
 parser = argparse.ArgumentParser(description="PyTorch Sylvester Normalizing flows")

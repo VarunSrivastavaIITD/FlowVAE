@@ -8,8 +8,7 @@ import math
 MIN_EPSILON = 1e-5
 MAX_EPSILON = 1.0 - 1e-5
 
-PI = Variable(torch.FloatTensor([math.pi]))
-PI.requires_grad = False
+PI = torch.tensor([math.pi], requires_grad=False)
 if torch.cuda.is_available():
     PI = PI.cuda()
 

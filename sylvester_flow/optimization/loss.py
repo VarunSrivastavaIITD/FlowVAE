@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from utils.distributions import log_normal_diag, log_normal_standard, log_bernoulli
+from ..utils.distributions import log_normal_diag, log_normal_standard, log_bernoulli
 import torch.nn.functional as F
 
 
