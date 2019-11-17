@@ -11,8 +11,8 @@ import torch.nn.functional as F
 from argparse import ArgumentParser
 from torch.distributions import MultivariateNormal
 
-from nf.flows import *
-from nf.models import NormalizingFlowModel
+from ..nf.flows import *
+from ..nf.models import NormalizingFlowModel
 
 
 def gen_data(n=512):
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     model = NormalizingFlowModel(prior, flows)
 
     optimizer = optim.Adam(model.parameters(), lr=0.005)
-    x = torch.Tensor(gen_data(args.n))
+    x = torch.from_numpy(gen_data(args.n))
 
     plot_data(x, color="black")
     plt.show()

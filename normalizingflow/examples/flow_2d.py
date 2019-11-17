@@ -9,8 +9,8 @@ import torch.nn.functional as F
 from argparse import ArgumentParser
 from torch.distributions import MultivariateNormal
 
-from nf.flows import *
-from nf.models import NormalizingFlowModel
+from ..nf.flows import OneByOneConv, ActNorm
+from ..nf.models import NormalizingFlowModel
 
 
 def gen_data(n=512):
@@ -62,9 +62,9 @@ if __name__ == "__main__":
 
     optimizer = optim.Adam(model.parameters(), lr=0.005)
     if args.use_mixture:
-        x = torch.Tensor(gen_mixture_data(args.n))
+        x = torch.from_numpy(gen_mixture_data(args.n))
     else:
-        x = torch.Tensor(gen_data(args.n))
+        x = torch.from_numpy(gen_data(args.n))
 
     for i in range(x.shape[1]):
         x[:, i] = (x[:, i] - torch.mean(x[:, i])) / torch.std(x[:, i])

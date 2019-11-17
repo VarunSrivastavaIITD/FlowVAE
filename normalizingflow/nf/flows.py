@@ -6,15 +6,13 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
-from .utils import unconstrained_RQS
+from normalizingflow.nf.utils import unconstrained_RQS
 
 # supported non-linearities: note that the function must be invertible
 functional_derivatives = {
     torch.tanh: lambda x: 1 - torch.pow(torch.tanh(x), 2),
-    F.leaky_relu: lambda x: (x > 0).type(torch.FloatTensor)
-    + (x < 0).type(torch.FloatTensor) * -0.01,
-    F.elu: lambda x: (x > 0).type(torch.FloatTensor)
-    + (x < 0).type(torch.FloatTensor) * torch.exp(x),
+    F.leaky_relu: lambda x: (x > 0).float() + (x < 0).float() * -0.01,
+    F.elu: lambda x: (x > 0).float() + (x < 0).float() * torch.exp(x),
 }
 
 
@@ -79,8 +77,8 @@ class Radial(nn.Module):
         self.log_alpha = nn.Parameter(torch.Tensor(1))
         self.beta = nn.Parameter(torch.Tensor(1))
 
-    def reset_parameters(dim):
-        init.uniform_(self.z0, -math.sqrt(1 / dim), math.sqrt(1 / dim))
+    def reset_parameters(self, dim):
+        init.uniform_(self.x0, -math.sqrt(1 / dim), math.sqrt(1 / dim))
         init.uniform_(self.log_alpha, -math.sqrt(1 / dim), math.sqrt(1 / dim))
         init.uniform_(self.beta, -math.sqrt(1 / dim), math.sqrt(1 / dim))
 
