@@ -303,7 +303,7 @@ class IAF(nn.Module):
             h = h + h_context
             h = flow[1](h)
             mean = flow[2](h)
-            gate = F.sigmoid(flow[3](h) + self.forget_bias)
+            gate = torch.sigmoid(flow[3](h) + self.forget_bias)
             z = gate * z + (1 - gate) * mean
             logdets += torch.sum(gate.log().view(gate.size(0), -1), 1)
         return z, logdets
