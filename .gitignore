@@ -2,5 +2,9 @@ mnist_data
 **/__pycache__**
 .mypy_cache
 *.pyc
-.vscode/settings.json
+.vscode/
 images/
+data/
+normalizingflow/svgs/
+results/
+vaebase/

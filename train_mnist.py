@@ -5,6 +5,7 @@ from tqdm import tqdm
 from pprint import pprint
 from torchvision import datasets, transforms
 import matplotlib.pyplot as plt
+import os
 import models
 from torch.utils.tensorboard import SummaryWriter
 
