@@ -74,13 +74,13 @@ def log_flow_tensorboard_images(
         # for (x,) in dataloader:
 
         z = flow_model.sample(nsamples)
-            xcap = ae_model.decoder.predict(z).to("cpu").view(-1, *shape)
-            writer.add_images(
-                tag,
-                tv.utils.make_grid(xcap.unsqueeze_(1), nrow=nrows).numpy(),
-                global_step=epoch,
-                dataformats="CHW",
-            )
-            # writer.add_images(tag, xcap, global_step=epoch, dataformats=dataformat)
+        xcap = ae_model.decoder.predict(z).to("cpu").view(-1, *shape)
+        writer.add_images(
+            tag,
+            tv.utils.make_grid(xcap.unsqueeze_(1), nrow=nrows).numpy(),
+            global_step=epoch,
+            dataformats="CHW",
+        )
+        # writer.add_images(tag, xcap, global_step=epoch, dataformats=dataformat)
     writer.flush()
 
