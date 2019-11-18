@@ -254,12 +254,7 @@ def main():
             )
 
             log_flow_tensorboard_images(
-                flow_model,
-                ae_model,
-                sample_loader,
-                writer,
-                epoch,
-                "Flow/sampled/Images",
+                flow_model, ae_model, writer, epoch, "Flow/sampled/Images"
             )
 
         if epoch % args.save_iter == 0:

@@ -57,22 +57,23 @@ def log_ae_tensorboard_images(
 def log_flow_tensorboard_images(
     flow_model,
     ae_model,
-    dataloader,
+    # dataloader,
     writer,
     epoch,
     tag,
     shape=(28, 28),
-    nrows=None,
+    nsamples=100,
     dataformat="NHW",
 ):
     flow_model.eval()
     ae_model.eval()
 
+    nrows = round(sqrt(nsamples))
+
     with torch.no_grad():
-        for (x,) in dataloader:
-            if nrows is None:
-                nrows = round(sqrt(x.size(0)))
-            z, _, _ = flow_model(x)
+        # for (x,) in dataloader:
+
+        z = flow_model.sample(nsamples)
             xcap = ae_model.decoder.predict(z).to("cpu").view(-1, *shape)
             writer.add_images(
                 tag,
