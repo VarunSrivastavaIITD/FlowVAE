@@ -15,7 +15,7 @@ import normalizingflow.nf.flows as flows
 from normalizingflow.nf.models import NormalizingFlowModel
 from models.vaemodels import AutoEncoder
 from utils.load_data import load_dataset
-from optimization.training import train_ae, train_flow
+from optimization.training import train_ae, train_flow, evaluate_ae
 from utils.plotting import log_ae_tensorboard_images, log_flow_tensorboard_images
 import shutil
 from utils.load_model import save_checkpoint
@@ -191,7 +191,7 @@ def main():
         raise Exception("Model directory for resume does not exist")
     if not (args.resume or args.initialize) and model_dir.exists():
         c = ""
-        while c != "y" or c != "n":
+        while c != "y" and c != "n":
             c = input("Model directory already exists, overwrite?").strip()
 
         if c == "y":
@@ -216,15 +216,15 @@ def main():
     )
 
     train_loader, val_loader, test_loader, args = load_dataset(args, flatten=True)
-    sample_dataset = torch.utils.data.TensorDataset(
-        prior.sample((len(val_loader.dataset),))
-    )
-    sample_loader = torch.utils.data.DataLoader(
-        sample_dataset,
-        batch_size=val_loader.batch_size,
-        shuffle=False,
-        pin_memory=False,
-    )
+    # sample_dataset = torch.utils.data.TensorDataset(
+    #     prior.sample((len(val_loader.dataset),))
+    # )
+    # sample_loader = torch.utils.data.DataLoader(
+    #     sample_dataset,
+    #     batch_size=val_loader.batch_size,
+    #     shuffle=False,
+    #     pin_memory=False,
+    # )
 
     flow_model = NormalizingFlowModel(prior, flow_list)
     ae_model = AutoEncoder(args.xdim, args.zdim, args.units, "binary")
@@ -247,6 +247,7 @@ def main():
             log_ae_tensorboard_images(
                 ae_model, val_loader, writer, epoch, "AE/val/Images"
             )
+            evaluate_ae(epoch, test_loader, ae_model, writer, ae_loss)
 
         if epoch <= args.flow_epochs:
             train_flow(
@@ -254,12 +255,7 @@ def main():
             )
 
             log_flow_tensorboard_images(
-                flow_model,
-                ae_model,
-                sample_loader,
-                writer,
-                epoch,
-                "Flow/sampled/Images",
+                flow_model, ae_model, writer, epoch, "Flow/sampled/Images"
             )
 
         if epoch % args.save_iter == 0:
