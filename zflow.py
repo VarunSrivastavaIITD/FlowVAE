@@ -216,15 +216,15 @@ def main():
     )
 
     train_loader, val_loader, test_loader, args = load_dataset(args, flatten=True)
-    sample_dataset = torch.utils.data.TensorDataset(
-        prior.sample((len(val_loader.dataset),))
-    )
-    sample_loader = torch.utils.data.DataLoader(
-        sample_dataset,
-        batch_size=val_loader.batch_size,
-        shuffle=False,
-        pin_memory=False,
-    )
+    # sample_dataset = torch.utils.data.TensorDataset(
+    #     prior.sample((len(val_loader.dataset),))
+    # )
+    # sample_loader = torch.utils.data.DataLoader(
+    #     sample_dataset,
+    #     batch_size=val_loader.batch_size,
+    #     shuffle=False,
+    #     pin_memory=False,
+    # )
 
     flow_model = NormalizingFlowModel(prior, flow_list)
     ae_model = AutoEncoder(args.xdim, args.zdim, args.units, "binary")
