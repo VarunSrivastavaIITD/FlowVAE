@@ -180,6 +180,8 @@ def parse():
 
 def main():
     args = parse()
+
+    # set random seeds
     random.seed(args.manual_seed)
     torch.manual_seed(args.manual_seed)
     np.random.seed(args.manual_seed)
@@ -205,8 +207,13 @@ def main():
     save_path = model_dir.joinpath("checkpoints")
     save_path.mkdir(exist_ok=True)
 
+    # prepare summary writer
     writer = SummaryWriter(summary_writer_dir, comment=args.writer_comment)
 
+    # prepare data
+    train_loader, val_loader, test_loader, args = load_dataset(args, flatten=True)
+
+    # prepare flow model
     if hasattr(flows, args.flow):
         flow_model_template = getattr(flows, args.flow)
 
@@ -226,9 +233,7 @@ def main():
     #     pin_memory=False,
     # )
 
-    flow_model = NormalizingFlowModel(prior, flow_list)
-    ae_model = AutoEncoder(args.xdim, args.zdim, args.units, "binary")
-
+    # setup optimizers
     ae_optimizer = optim.Adam(ae_model.parameters(), args.learning_rate)
     flow_optimizer = optim.Adam(flow_model.parameters(), args.learning_rate)
 
