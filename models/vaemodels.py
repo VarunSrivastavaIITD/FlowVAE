@@ -80,20 +80,24 @@ class ConvAutoEncoder(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = nn.Sequential(
-            nn.Conv2d(1, 16, 3, stride=3, padding=1),  # b, 16, 10, 10
-            nn.ReLU(True),
-            nn.MaxPool2d(2, stride=2),  # b, 16, 5, 5
-            nn.Conv2d(16, 8, 3, stride=2, padding=1),  # b, 8, 3, 3
-            nn.ReLU(True),
-            nn.MaxPool2d(2, stride=1),  # b, 8, 2, 2
+            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=2, padding=1),  # b, 16, 16, 16
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(num_features=16),
+            # nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=1)
+            # nn.ReLU(inplace=True),
+            # nn.BatchNorm2d(num_features=16)
+            nn.Conv2d(in_channels=16, out_channels=8, kernel_size=3, stride=2, padding=1)  # b, 8, 8, 8
+            # nn.ReLU(inplace=True)
         )
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(8, 16, 3, stride=2),  # b, 16, 5, 5
+            nn.ConvTranspose2d(in_channels=8, out_channels=16, kernel_size=3, stride=2, padding=1, output_padding=1),  # b, 16, 16, 16
             nn.ReLU(True),
-            nn.ConvTranspose2d(16, 8, 5, stride=3, padding=1),  # b, 8, 15, 15
+            nn.BatchNorm2d(num_features=16),
+            nn.ConvTranspose2d(in_channels=16, out_channels=16, kernel_size=3, stride=2, padding=1, output_padding=1),  # b, 16, 32, 32
             nn.ReLU(True),
-            nn.ConvTranspose2d(8, 1, 2, stride=2, padding=1),  # b, 1, 28, 28
-            nn.Tanh(),
+            nn.BatchNorm2d(num_features=16),
+            nn.Conv2d(in_channels=16, out_channels=3, kernel_size=1, stride=1),  # b, 3, 32, 32
+            nn.Sigmoid()
         )
 
     def forward(self, x):
@@ -101,3 +105,26 @@ class ConvAutoEncoder(nn.Module):
         x = self.decoder(x)
         return x
 
+    def encode(self,x):
+        z = self.encoder(x)
+        return z.view(-1,512)
+
+    def decode(self,z):
+        x = self.decoder(z.view(-1,8,8,8))
+        return x
+
+
+class Discriminator(nn.Module):
+    def __init__(self, z_dim, n_units):
+        super().__init__()
+        self.z_dim = z_dim
+        self.n_units = n_units
+        layers = [nn.Linear(z_dim, n_units[0]), nn.ELU()]
+        for i in range(1, len(n_units)):
+            layers.append(nn.Linear(n_units[i - 1], n_units[i]))
+            layers.append(nn.ELU())
+        layers.append(nn.Linear(n_units[-1], 1))
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, z):
+        return self.net(z)

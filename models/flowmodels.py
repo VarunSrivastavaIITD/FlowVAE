@@ -86,22 +86,6 @@ class Flow(nn.Module):
         return J
 
 
-class Discriminator(nn.Module):
-    def __init__(self, z_dim, n_units):
-        super().__init__()
-        self.z_dim = z_dim
-        self.n_units = n_units
-        layers = [nn.Linear(z_dim, n_units[0]), nn.ELU()]
-        for i in range(1, len(n_units)):
-            layers.append(nn.Linear(n_units[i - 1], n_units[i]))
-            layers.append(nn.ELU())
-        layers.append(nn.Linear(n_units[-1], 1))
-        self.net = nn.Sequential(*layers)
-
-    def forward(self, z):
-        return self.net(z)
-
-
 class VPlanarFlow(nn.Module):
     def __init__(self, args):
         super().__init__()

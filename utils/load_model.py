@@ -21,7 +21,7 @@ def save_checkpoint(
     )
 
 
-def load_checkpoint(savepath, fname, device="cpu"):
+def load_checkpoint(save_path, fname, device="cpu"):
     save_path = Path(save_path)
     fname = Path(fname)
     fullpath = save_path.joinpath(fname)

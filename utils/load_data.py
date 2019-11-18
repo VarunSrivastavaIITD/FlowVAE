@@ -71,11 +71,51 @@ def load_mnist(args, **kwargs):
 
     return train_loader, val_loader, test_loader, args
 
+def load_cifar10(args, **kwargs):
+    preprocess = tv.transforms.ToTensor()
+    train_dataset = tv.datasets.CIFAR10(
+        "./data", transform=preprocess, download=True, train=True
+    )
+    train_len = len(train_dataset)
+
+    if args.val_frac:
+        train_indices, validation_indices = train_test_split(
+            np.arange(train_len), test_size=args.val_frac, random_state=args.manual_seed
+        )
+        train_indices = train_indices.tolist()
+        validation_indices = validation_indices.tolist()
+    else:
+        train_indices = np.arange(train_len).tolist()
+        val_indices = []
+
+    train = utdata.Subset(train_dataset, train_indices)
+    validation = utdata.Subset(train_dataset, validation_indices)
+
+    # pytorch data loader
+    train_loader = data_utils.DataLoader(
+        train, batch_size=args.batch_size, shuffle=True, pin_memory=args.pin_memory
+    )
+
+    val_loader = data_utils.DataLoader(
+        validation,
+        batch_size=args.batch_size,
+        shuffle=False,
+        pin_memory=args.pin_memory,
+    )
+
+    test = tv.datasets.CIFAR10("./data", transform=preprocess, download=True, train=False)
+    test_loader = data_utils.DataLoader(
+        test, batch_size=args.batch_size, shuffle=False, pin_memory=args.pin_memory
+    )
+
+    return train_loader, val_loader, test_loader, args
 
 def load_dataset(args, **kwargs):
 
     if args.dataset == "mnist":
         train_loader, val_loader, test_loader, args = load_mnist(args, **kwargs)
+    else if args.dataset == "cifar10":
+        train_loader, val_loader, test_loader, args = load_cifar10(args, **kwargs)
     else:
         raise Exception("Wrong name of the dataset!")
 

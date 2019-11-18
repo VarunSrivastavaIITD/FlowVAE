@@ -8,3 +8,6 @@ data/
 normalizingflow/svgs/
 results/
 vaebase/
+checkpoints/
+images*
+runs/
