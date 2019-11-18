@@ -114,7 +114,7 @@ def load_dataset(args, **kwargs):
 
     if args.dataset == "mnist":
         train_loader, val_loader, test_loader, args = load_mnist(args, **kwargs)
-    else if args.dataset == "cifar10":
+    elif args.dataset == "cifar10":
         train_loader, val_loader, test_loader, args = load_cifar10(args, **kwargs)
     else:
         raise Exception("Wrong name of the dataset!")
