@@ -191,7 +191,7 @@ def main():
         raise Exception("Model directory for resume does not exist")
     if not (args.resume or args.initialize) and model_dir.exists():
         c = ""
-        while c != "y" or c != "n":
+        while c != "y" and c != "n":
             c = input("Model directory already exists, overwrite?").strip()
 
         if c == "y":
