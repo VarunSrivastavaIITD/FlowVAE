@@ -15,7 +15,7 @@ import normalizingflow.nf.flows as flows
 from normalizingflow.nf.models import NormalizingFlowModel
 from models.vaemodels import AutoEncoder
 from utils.load_data import load_dataset
-from optimization.training import train_ae, train_flow
+from optimization.training import train_ae, train_flow, evaluate_ae
 from utils.plotting import log_ae_tensorboard_images, log_flow_tensorboard_images
 import shutil
 from utils.load_model import save_checkpoint
@@ -247,6 +247,7 @@ def main():
             log_ae_tensorboard_images(
                 ae_model, val_loader, writer, epoch, "AE/val/Images"
             )
+            evaluate_ae(epoch, test_loader, ae_model, writer, ae_loss)
 
         if epoch <= args.flow_epochs:
             train_flow(

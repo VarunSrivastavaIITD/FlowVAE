@@ -41,6 +41,26 @@ def train_ae(epoch, dataloader, model, optimizer, writer, loss_func, **kwargs):
     )
 
 
+def evaluate_ae(epoch, dataloader, model, writer, loss_func, **kwargs):
+    # Initialization of model states, variables etc
+    model.eval()
+    loss_meter = metrics.new_histogram(f"test_vae_loss_{epoch}")
+
+    with torch.no_grad():
+        for batch_idx, (x, _) in enumerate(dataloader):
+
+            batch_size = x.size(0)
+
+            xcap = model(x)
+            loss = loss_func(xcap, x) / batch_size
+            loss_meter.notify(loss.item())
+
+    writer.add_scalar("Loss/AE/test/mean", loss_meter.get()["arithmetic_mean"], epoch)
+    writer.add_scalar(
+        "Loss/AE/test/std_dev", loss_meter.get()["standard_deviation"], epoch
+    )
+
+
 def train_flow(epoch, dataloader, flow_model, ae_model, optimizer, writer, **kwargs):
     flow_model.train()
     loss_meter = metrics.new_histogram(f"train_flow_loss_{epoch}")
