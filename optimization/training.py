@@ -13,6 +13,7 @@ def train_ae(epoch, dataloader, model, optimizer, writer, loss_func, **kwargs):
     # Initialization of model states, variables etc
     model.train()
     loss_meter = metrics.new_histogram(f"train_vae_loss_{epoch}")
+    device = kwargs.get("device", next(model.parameters()).device)
 
     total_iters = (
         ceil(len(dataloader.dataset) / dataloader.batch_size)
@@ -25,6 +26,7 @@ def train_ae(epoch, dataloader, model, optimizer, writer, loss_func, **kwargs):
 
             optimizer.zero_grad()
             batch_size = x.size(0)
+            x = x.to(device)
 
             xcap = model(x)
             loss = loss_func(xcap, x) / batch_size
@@ -45,11 +47,13 @@ def evaluate_ae(epoch, dataloader, model, writer, loss_func, **kwargs):
     # Initialization of model states, variables etc
     model.eval()
     loss_meter = metrics.new_histogram(f"test_vae_loss_{epoch}")
+    device = kwargs.get("device", next(model.parameters()).device)
 
     with torch.no_grad():
         for batch_idx, (x, _) in enumerate(dataloader):
 
             batch_size = x.size(0)
+            x = x.to(device)
 
             xcap = model(x)
             loss = loss_func(xcap, x) / batch_size

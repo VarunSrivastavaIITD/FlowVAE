@@ -36,17 +36,28 @@ def plot_images(img_tensor, img_title=None, nrows=4):
 
 
 def log_ae_tensorboard_images(
-    model, dataloader, writer, epoch, tag, shape=(28, 28), nrows=None, dataformat="NHW"
+    model,
+    dataloader,
+    writer,
+    epoch,
+    tag,
+    shape=(1, 28, 28),
+    nrows=None,
+    dataformat="NHW",
 ):
     model.eval()
     with torch.no_grad():
         for x, _ in dataloader:
             if nrows is None:
                 nrows = round(sqrt(x.size(0)))
-            xcap = model.predict(x).to("cpu").view(-1, *shape)
+            xcap = (
+                model.predict(x.to(next(model.parameters()).device))
+                .to("cpu")
+                .view(-1, *shape)
+            )
             writer.add_image(
                 tag,
-                tv.utils.make_grid(xcap.unsqueeze_(1), nrow=nrows).numpy(),
+                tv.utils.make_grid(xcap, nrow=nrows).numpy(),
                 global_step=epoch,
                 dataformats="CHW",
             )
@@ -61,7 +72,7 @@ def log_flow_tensorboard_images(
     writer,
     epoch,
     tag,
-    shape=(28, 28),
+    shape=(1, 28, 28),
     nsamples=100,
     dataformat="NHW",
 ):
@@ -74,10 +85,14 @@ def log_flow_tensorboard_images(
         # for (x,) in dataloader:
 
         z = flow_model.sample(nsamples)
-        xcap = ae_model.decoder.predict(z).to("cpu").view(-1, *shape)
+        xcap = (
+            ae_model.decoder.predict(z.to(next(ae_model.parameters()).device))
+            .to("cpu")
+            .view(-1, *shape)
+        )
         writer.add_images(
             tag,
-            tv.utils.make_grid(xcap.unsqueeze_(1), nrow=nrows).numpy(),
+            tv.utils.make_grid(xcap, nrow=nrows).numpy(),
             global_step=epoch,
             dataformats="CHW",
         )

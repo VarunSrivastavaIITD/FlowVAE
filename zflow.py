@@ -221,23 +221,17 @@ def main():
     prior = torch.distributions.MultivariateNormal(
         torch.zeros(args.zdim), torch.eye(args.zdim)
     )
+    flow_model = NormalizingFlowModel(prior, flow_list).to(args.device)
 
-    train_loader, val_loader, test_loader, args = load_dataset(args, flatten=True)
-    # sample_dataset = torch.utils.data.TensorDataset(
-    #     prior.sample((len(val_loader.dataset),))
-    # )
-    # sample_loader = torch.utils.data.DataLoader(
-    #     sample_dataset,
-    #     batch_size=val_loader.batch_size,
-    #     shuffle=False,
-    #     pin_memory=False,
-    # )
+    # prepare autoencoder
+    ae_model = AutoEncoder(args.xdim, args.zdim, args.units, "binary").to(args.device)
 
     # setup optimizers
     ae_optimizer = optim.Adam(ae_model.parameters(), args.learning_rate)
     flow_optimizer = optim.Adam(flow_model.parameters(), args.learning_rate)
 
-    ae_loss = nn.BCEWithLogitsLoss(reduction="sum")
+    # setup loss
+    ae_loss = nn.BCEWithLogitsLoss(reduction="sum").to(args.device)
 
     total_epochs = np.max([args.vae_epochs, args.flow_epochs, args.epochs])
 
@@ -246,9 +240,18 @@ def main():
     if args.initialize:
         raise NotImplementedError
 
+    # training loop
     for epoch in trange(1, total_epochs + 1):
         if epoch <= args.vae_epochs:
-            train_ae(epoch, train_loader, ae_model, ae_optimizer, writer, ae_loss)
+            train_ae(
+                epoch,
+                train_loader,
+                ae_model,
+                ae_optimizer,
+                writer,
+                ae_loss,
+                device=args.device,
+            )
             log_ae_tensorboard_images(
                 ae_model, val_loader, writer, epoch, "AE/val/Images"
             )
@@ -256,7 +259,13 @@ def main():
 
         if epoch <= args.flow_epochs:
             train_flow(
-                epoch, train_loader, flow_model, ae_model, flow_optimizer, writer
+                epoch,
+                train_loader,
+                flow_model,
+                ae_model,
+                flow_optimizer,
+                writer,
+                device=args.device,
             )
 
             log_flow_tensorboard_images(
