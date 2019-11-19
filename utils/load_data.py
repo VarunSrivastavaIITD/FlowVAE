@@ -71,6 +71,7 @@ def load_mnist(args, **kwargs):
 
     return train_loader, val_loader, test_loader, args
 
+
 def load_cifar10(args, **kwargs):
     preprocess = tv.transforms.ToTensor()
     train_dataset = tv.datasets.CIFAR10(
@@ -103,12 +104,15 @@ def load_cifar10(args, **kwargs):
         pin_memory=args.pin_memory,
     )
 
-    test = tv.datasets.CIFAR10("./data", transform=preprocess, download=True, train=False)
+    test = tv.datasets.CIFAR10(
+        "./data", transform=preprocess, download=True, train=False
+    )
     test_loader = data_utils.DataLoader(
         test, batch_size=args.batch_size, shuffle=False, pin_memory=args.pin_memory
     )
 
     return train_loader, val_loader, test_loader, args
+
 
 def load_dataset(args, **kwargs):
 
