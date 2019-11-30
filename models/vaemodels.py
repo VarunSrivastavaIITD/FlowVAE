@@ -50,15 +50,15 @@ class Decoder(nn.Module):
 class AutoEncoder(nn.Module):
     def __init__(self, x_dim, z_dim, n_units, output_dist):
         super().__init__()
-        if hasattr(x_dim, "__len__"):
-            if len(x_dim) > 1:
-                raise Exception("Multidimensional input where scalar was expected")
-            x_dim = x_dim[0]
+        x_dim = np.squeeze(x_dim)
+        z_dim = np.squeeze(z_dim)
+        if x_dim.size > 1:
+            raise Exception("Multidimensional input where scalar was expected")
+        x_dim = x_dim.item()
 
-        if hasattr(z_dim, "__len__") and len(z_dim) == 1:
-            if len(z_dim) > 1:
-                raise Exception("Multidimensional input where scalar was expected")
-            z_dim = z_dim[0]
+        if z_dim.size > 1:
+            raise Exception("Multidimensional input where scalar was expected")
+        z_dim = z_dim.item()
         x_dim = int(x_dim)
         z_dim = int(z_dim)
         self.encoder = Encoder(x_dim, z_dim, n_units)
@@ -80,38 +80,62 @@ class ConvAutoEncoder(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=2, padding=1),  # b, 16, 16, 16
+            nn.Conv2d(
+                in_channels=3, out_channels=16, kernel_size=3, stride=2, padding=1
+            ),  # b, 16, 16, 16
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(num_features=16),
             # nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=1)
             # nn.ReLU(inplace=True),
             # nn.BatchNorm2d(num_features=16)
-            nn.Conv2d(in_channels=16, out_channels=8, kernel_size=3, stride=2, padding=1)  # b, 8, 8, 8
+            nn.Conv2d(
+                in_channels=16, out_channels=8, kernel_size=3, stride=2, padding=1
+            )  # b, 8, 8, 8
             # nn.ReLU(inplace=True)
         )
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=8, out_channels=16, kernel_size=3, stride=2, padding=1, output_padding=1),  # b, 16, 16, 16
+            nn.ConvTranspose2d(
+                in_channels=8,
+                out_channels=16,
+                kernel_size=3,
+                stride=2,
+                padding=1,
+                output_padding=1,
+            ),  # b, 16, 16, 16
             nn.ReLU(True),
             nn.BatchNorm2d(num_features=16),
-            nn.ConvTranspose2d(in_channels=16, out_channels=16, kernel_size=3, stride=2, padding=1, output_padding=1),  # b, 16, 32, 32
+            nn.ConvTranspose2d(
+                in_channels=16,
+                out_channels=16,
+                kernel_size=3,
+                stride=2,
+                padding=1,
+                output_padding=1,
+            ),  # b, 16, 32, 32
             nn.ReLU(True),
             nn.BatchNorm2d(num_features=16),
-            nn.Conv2d(in_channels=16, out_channels=3, kernel_size=1, stride=1),  # b, 3, 32, 32
-            nn.Sigmoid()
+            nn.Conv2d(
+                in_channels=16, out_channels=3, kernel_size=1, stride=1
+            ),  # b, 3, 32, 32
+            nn.Hardtanh(0, 1),
         )
+        self.decoder.predict = self.decoder.__call__
 
     def forward(self, x):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
 
-    def encode(self,x):
+    def encode(self, x):
         z = self.encoder(x)
-        return z.view(-1,512)
+        return z.view(-1, 512)
 
-    def decode(self,z):
-        x = self.decoder(z.view(-1,8,8,8))
+    def decode(self, z):
+        x = self.decoder(z.view(-1, 8, 8, 8))
         return x
+
+    def predict(self, x):
+        return self.forward(x)
 
 
 class Discriminator(nn.Module):
