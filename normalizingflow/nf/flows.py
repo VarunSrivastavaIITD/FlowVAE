@@ -176,8 +176,8 @@ class MAF(nn.Module):
         init.uniform_(self.initial_param, -math.sqrt(0.5), math.sqrt(0.5))
 
     def forward(self, x):
-        z = torch.zeros_like(x)
-        log_det = torch.zeros(z.shape[0])
+        z = torch.zeros_like(x, device=x.device)
+        log_det = torch.zeros(z.shape[0], device=x.device)
         for i in range(self.dim):
             if i == 0:
                 mu, alpha = self.initial_param[0], self.initial_param[1]
@@ -189,8 +189,8 @@ class MAF(nn.Module):
         return z.flip(dims=(1,)), log_det
 
     def backward(self, z):
-        x = torch.zeros_like(z)
-        log_det = torch.zeros(z.shape[0])
+        x = torch.zeros_like(z, device=z.device)
+        log_det = torch.zeros(z.shape[0], device=z.device)
         z = z.flip(dims=(1,))
         for i in range(self.dim):
             if i == 0:
