@@ -11,3 +11,4 @@ vaebase/
 checkpoints/
 images*
 runs/
+*.h5
