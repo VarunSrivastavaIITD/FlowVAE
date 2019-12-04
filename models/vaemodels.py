@@ -48,7 +48,7 @@ class Decoder(nn.Module):
 
 
 class AutoEncoder(nn.Module):
-    def __init__(self, x_dim, z_dim, n_units, output_dist):
+    def __init__(self, x_dim, z_dim, n_units, output_dist="binary"):
         super().__init__()
         if hasattr(x_dim, "__len__"):
             if len(x_dim) > 1:
@@ -75,12 +75,18 @@ class AutoEncoder(nn.Module):
         x = self.decoder.predict(x)
         return x
 
+    def encode(self,x):
+        return self.encoder(x)
+
+    def decode(self,z):
+        return self.decoder(z)
+
 
 class ConvAutoEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels=3, image_size=(32,32), activation=nn.Sigmoid()):
         super().__init__()
         self.encoder = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=2, padding=1),  # b, 16, 16, 16
+            nn.Conv2d(in_channels=in_channels, out_channels=16, kernel_size=3, stride=2, padding=1),  # b, 16, 16, 16
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(num_features=16),
             # nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=1)
@@ -96,9 +102,11 @@ class ConvAutoEncoder(nn.Module):
             nn.ConvTranspose2d(in_channels=16, out_channels=16, kernel_size=3, stride=2, padding=1, output_padding=1),  # b, 16, 32, 32
             nn.ReLU(True),
             nn.BatchNorm2d(num_features=16),
-            nn.Conv2d(in_channels=16, out_channels=3, kernel_size=1, stride=1),  # b, 3, 32, 32
-            nn.Sigmoid()
+            nn.Conv2d(in_channels=16, out_channels=in_channels, kernel_size=1, stride=1),  # b, 3, 32, 32
         )
+        if activation!=None:
+            self.decoder.add_module("activation", activation)
+        self.z_dim = (8,(image_size[0]//4),(image_size[1]//4))
 
     def forward(self, x):
         x = self.encoder(x)
@@ -107,10 +115,10 @@ class ConvAutoEncoder(nn.Module):
 
     def encode(self,x):
         z = self.encoder(x)
-        return z.view(-1,512)
+        return z.view(-1,np.prod(self.z_dim))
 
     def decode(self,z):
-        x = self.decoder(z.view(-1,8,8,8))
+        x = self.decoder(z.view(-1,*self.z_dim))
         return x
 
 
