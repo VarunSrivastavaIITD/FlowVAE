@@ -161,6 +161,7 @@ class ConvAutoEncoder(nn.Module):
         )
         if activation != None:
             self.decoder.add_module("activation", activation)
+        self.decoder.predict = self.decoder.forward
         self.z_dim = (8, (image_size[0] // 4), (image_size[1] // 4))
 
     def forward(self, x):
