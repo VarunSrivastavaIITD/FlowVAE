@@ -4,7 +4,7 @@ import os
 import scipy.misc
 import tensorflow as tf
 import fire
-
+import imageio
 
 def save_images_from_event(fn, tag, output_dir="./"):
     os.makedirs(output_dir, exist_ok=True)
@@ -23,7 +23,7 @@ def save_images_from_event(fn, tag, output_dir="./"):
                         "{}/image_{:05d}.png".format(output_dir, count)
                     )
                     print("Saving '{}'".format(output_fn))
-                    scipy.misc.imsave(output_fn, im)
+                    imageio.imwrite(output_fn, im)
                     count += 1
 
 
