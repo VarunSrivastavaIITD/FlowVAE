@@ -4,6 +4,13 @@ import torch.nn.functional as F
 from torch import autograd, nn, optim
 from torch.nn import functional as F
 
+class Reshape(nn.Module):
+    def __init__(self, *args):
+        super(Reshape, self).__init__()
+        self.shape = args
+
+    def forward(self, x):
+        return x.view(self.shape)
 
 class Encoder(nn.Module):
     """docstring for Encoder"""
@@ -24,6 +31,26 @@ class Encoder(nn.Module):
     def forward(self, x):
         return self.net(x)
 
+class ConvGenerator(nn.Module):
+    def __init__(self, z_dim, x_dim):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(z_dim,z_dim),
+            nn.ELU(),
+            nn.BatchNorm1d(z_dim),
+            nn.Linear(z_dim, np.prod(x_dim)),
+            nn.ELU(),
+            nn.BatchNorm1d(np.prod(x_dim)),
+            Reshape(-1,*x_dim),
+            nn.Conv2d(x_dim[0], x_dim[0], kernel_size=3, padding=1),
+            nn.ELU(),
+            nn.BatchNorm2d(x_dim[0]),
+            nn.Conv2d(x_dim[0], x_dim[0], kernel_size=3, padding=1)
+        )
+        self.x_dim = x_dim
+
+    def forward(self,z):
+        return self.net(z).view(-1,np.prod(self.x_dim))
 
 class Decoder(nn.Module):
     def __init__(self, z_dim, x_dim, n_units, x_type="binary"):
@@ -48,7 +75,7 @@ class Decoder(nn.Module):
 
 
 class AutoEncoder(nn.Module):
-    def __init__(self, x_dim, z_dim, n_units, output_dist):
+    def __init__(self, x_dim, z_dim, n_units, output_dist="binary"):
         super().__init__()
         x_dim = np.squeeze(x_dim)
         z_dim = np.squeeze(z_dim)
@@ -75,14 +102,18 @@ class AutoEncoder(nn.Module):
         x = self.decoder.predict(x)
         return x
 
+    def encode(self,x):
+        return self.encoder(x)
+
+    def decode(self,z):
+        return self.decoder(z)
+
 
 class ConvAutoEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels=3, image_size=(32,32), activation=nn.Sigmoid()):
         super().__init__()
         self.encoder = nn.Sequential(
-            nn.Conv2d(
-                in_channels=3, out_channels=16, kernel_size=3, stride=2, padding=1
-            ),  # b, 16, 16, 16
+            nn.Conv2d(in_channels=in_channels, out_channels=16, kernel_size=3, stride=2, padding=1),  # b, 16, 16, 16
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(num_features=16),
             # nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=1)
@@ -114,12 +145,11 @@ class ConvAutoEncoder(nn.Module):
             ),  # b, 16, 32, 32
             nn.ReLU(True),
             nn.BatchNorm2d(num_features=16),
-            nn.Conv2d(
-                in_channels=16, out_channels=3, kernel_size=1, stride=1
-            ),  # b, 3, 32, 32
-            nn.Hardtanh(0, 1),
+            nn.Conv2d(in_channels=16, out_channels=in_channels, kernel_size=1, stride=1),  # b, 3, 32, 32
         )
-        self.decoder.predict = self.decoder.__call__
+        if activation!=None:
+            self.decoder.add_module("activation", activation)
+        self.z_dim = (8,(image_size[0]//4),(image_size[1]//4))
 
     def forward(self, x):
         x = self.encoder(x)
@@ -128,10 +158,10 @@ class ConvAutoEncoder(nn.Module):
 
     def encode(self, x):
         z = self.encoder(x)
-        return z.view(-1, 512)
+        return z.view(-1,np.prod(self.z_dim))
 
-    def decode(self, z):
-        x = self.decoder(z.view(-1, 8, 8, 8))
+    def decode(self,z):
+        x = self.decoder(z.view(-1,*self.z_dim))
         return x
 
     def predict(self, x):

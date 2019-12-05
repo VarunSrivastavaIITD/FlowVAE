@@ -11,5 +11,6 @@ vaebase/
 checkpoints/
 images*
 runs/
-*.h5
 advae-samples/
+mnist-*/
+*.h5
