@@ -6,6 +6,7 @@ import tensorflow as tf
 import fire
 import imageio
 
+
 def save_images_from_event(fn, tag, output_dir="./"):
     os.makedirs(output_dir, exist_ok=True)
 
@@ -29,4 +30,3 @@ def save_images_from_event(fn, tag, output_dir="./"):
 
 if __name__ == "__main__":
     fire.Fire({"save": save_images_from_event})
-

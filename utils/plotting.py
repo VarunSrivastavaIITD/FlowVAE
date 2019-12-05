@@ -104,4 +104,3 @@ def log_flow_tensorboard_images(
         )
         # writer.add_images(tag, xcap, global_step=epoch, dataformats=dataformat)
     writer.flush()
-
