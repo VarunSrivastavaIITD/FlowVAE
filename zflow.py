@@ -17,13 +17,16 @@ from tensorboardX import SummaryWriter
 from tqdm import trange
 
 import normalizingflow.nf.flows as flows
-from models.vaemodels import AutoEncoder
+from models import AutoEncoder, ConvAutoEncoder
 from normalizingflow.nf.models import NormalizingFlowModel
-from optimization.training import evaluate_ae, train_ae, train_flow
-from utils.load_data import load_dataset
-from utils.load_model import save_checkpoint
-from utils.parse import parse
-from utils.plotting import log_ae_tensorboard_images, log_flow_tensorboard_images
+from optimization import evaluate_ae, train_ae, train_flow
+from utils import (
+    load_dataset,
+    save_checkpoint,
+    parse,
+    log_ae_tensorboard_images,
+    log_flow_tensorboard_images,
+)
 
 
 def main():
@@ -59,7 +62,9 @@ def main():
     writer = SummaryWriter(summary_writer_dir, comment=args.writer_comment)
 
     # prepare data
-    train_loader, val_loader, test_loader, args = load_dataset(args, flatten=True)
+    train_loader, val_loader, test_loader, args = load_dataset(
+        args, flatten=args.flatten
+    )
 
     # prepare flow model
     if hasattr(flows, args.flow):
@@ -72,14 +77,26 @@ def main():
     flow_model = NormalizingFlowModel(prior, flow_list).to(args.device)
 
     # prepare autoencoder
-    ae_model = AutoEncoder(args.xdim, args.zdim, args.units, "binary").to(args.device)
+    if args.dataset == "mnist":
+        ae_model = AutoEncoder(args.xdim, args.zdim, args.units, "binary").to(
+            args.device
+        )
+    elif args.dataset == "cifar10":
+        ae_model = ConvAutoEncoder().to(args.device)
 
     # setup optimizers
     ae_optimizer = optim.Adam(ae_model.parameters(), args.learning_rate)
     flow_optimizer = optim.Adam(flow_model.parameters(), args.learning_rate)
 
     # setup loss
-    ae_loss = nn.BCEWithLogitsLoss(reduction="sum").to(args.device)
+    if args.dataset == "mnist":
+        args.imshape = (1, 28, 28)
+        args.zshape = (args.zdim,)
+        ae_loss = nn.BCEWithLogitsLoss(reduction="sum").to(args.device)
+    elif args.dataset == "cifar10":
+        args.imshape = (3, 32, 32)
+        args.zshape = (8, 8, 8)
+        ae_loss = nn.MSELoss(reduction="sum").to(args.device)
 
     total_epochs = np.max([args.vae_epochs, args.flow_epochs, args.epochs])
 
@@ -101,7 +118,12 @@ def main():
                 device=args.device,
             )
             log_ae_tensorboard_images(
-                ae_model, val_loader, writer, epoch, "AE/val/Images"
+                ae_model,
+                val_loader,
+                writer,
+                epoch,
+                "AE/val/Images",
+                xshape=args.imshape,
             )
             evaluate_ae(epoch, test_loader, ae_model, writer, ae_loss)
 
@@ -117,7 +139,13 @@ def main():
             )
 
             log_flow_tensorboard_images(
-                flow_model, ae_model, writer, epoch, "Flow/sampled/Images"
+                flow_model,
+                ae_model,
+                writer,
+                epoch,
+                "Flow/sampled/Images",
+                xshape=args.imshape,
+                zshape=args.zshape,
             )
 
         if epoch % args.save_iter == 0:
