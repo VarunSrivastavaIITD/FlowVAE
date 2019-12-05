@@ -13,12 +13,17 @@ import numpy as np
 from keras.models import Model
 from scipy.special import expit
 from skimage.io import imread_collection
-import tensorflow.contrib.gan as tfg
+
+# import tensorflow.contrib.gan as tfg
+import tensorflow_gan.python.eval.classifier_metrics as cm
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
 
+# diagonal_only_frechet_classifier_distance_from_activations = (
+#     tfg.eval.diagonal_only_frechet_classifier_distance_from_activations
+# )
 diagonal_only_frechet_classifier_distance_from_activations = (
-    tfg.eval.diagonal_only_frechet_classifier_distance_from_activations
+    cm.diagonal_only_frechet_classifier_distance_from_activations
 )
 
 
