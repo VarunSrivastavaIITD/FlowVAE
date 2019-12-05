@@ -65,6 +65,23 @@ def parse():
         help="dataset choice.",
     )
     parser.add_argument(
+        "--ae-model",
+        choices=["linear", "conv"],
+        default="conv",
+        metavar="AUTOENCODER MODEL",
+        help="type of autoencoder network to use",
+    )
+    parser.add_argument(
+        "--permute-conv",
+        action="store_true",
+        help="use one by one conv to induce generalized permutations",
+    )
+    parser.add_argument(
+        "--actnorm",
+        action="store_true",
+        help="Use activation normalization for flow model",
+    )
+    parser.add_argument(
         "--val-frac",
         type=float,
         default=0.1,
@@ -114,7 +131,7 @@ def parse():
     parser.add_argument(
         "--initialize", action="store_true", help="initialize model with another model"
     )
-    parser.add_argument("--model_name", help="Model Name for save files")
+    parser.add_argument("--model-name", help="Model Name for save files")
     parser.add_argument(
         "--model-path",
         # required=True if "--resume" or "--initialize" in sys.argv else False,
@@ -128,7 +145,15 @@ def parse():
         help="Hidden layer sizes for the autoencoder",
     )
     parser.add_argument(
-        "--flatten", action="store_true", help="flatten the input image/domain"
+        "--flatten-image", action="store_true", help="flatten the input image/domain"
+    )
+    parser.add_argument(
+        "--no-flatten-latent",
+        action="store_true",
+        help="skip flattening the latent dimension for the flow",
+    )
+    parser.add_argument(
+        "--save-images", action="store_true", help="save images at end of training"
     )
 
     args = parser.parse_args()
