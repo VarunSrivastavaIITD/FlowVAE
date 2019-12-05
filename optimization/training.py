@@ -68,6 +68,7 @@ def evaluate_ae(epoch, dataloader, model, writer, loss_func, **kwargs):
 def train_flow(epoch, dataloader, flow_model, ae_model, optimizer, writer, **kwargs):
     flow_model.train()
     loss_meter = metrics.new_histogram(f"train_flow_loss_{epoch}")
+    flatten = kwargs.get("flatten", False)
 
     total_iters = (
         ceil(len(dataloader.dataset) / dataloader.batch_size)
@@ -75,14 +76,19 @@ def train_flow(epoch, dataloader, flow_model, ae_model, optimizer, writer, **kwa
         else len(dataloader.dataset) // dataloader.batch_size
     )
     ae_model.eval()
+    device = kwargs.get("device", next(ae_model.parameters()).device)
 
     with tqdm(total=total_iters) as pbar:
         for batch_idx, (x, y) in enumerate(dataloader):
 
             optimizer.zero_grad()
+            batch_size = x.size(0)
 
             with torch.no_grad():
-                x = ae_model.encoder(x)
+                x = ae_model.encoder(x.to(device))
+
+            if flatten:
+                x = x.view(batch_size, -1)
 
             z, prior_logprob, log_det = flow_model(x)
             logprob = prior_logprob + log_det
