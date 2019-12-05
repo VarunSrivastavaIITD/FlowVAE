@@ -41,7 +41,7 @@ def log_ae_tensorboard_images(
     writer,
     epoch,
     tag,
-    shape=(1, 28, 28),
+    xshape=(1, 28, 28),
     nrows=None,
     dataformat="NHW",
 ):
@@ -53,7 +53,7 @@ def log_ae_tensorboard_images(
             xcap = (
                 model.predict(x.to(next(model.parameters()).device))
                 .to("cpu")
-                .view(-1, *shape)
+                .view(-1, *xshape)
             )
             writer.add_image(
                 tag,
@@ -72,7 +72,8 @@ def log_flow_tensorboard_images(
     writer,
     epoch,
     tag,
-    shape=(1, 28, 28),
+    xshape=(1, 28, 28),
+    zshape=None,
     nsamples=100,
     dataformat="NHW",
 ):
@@ -85,11 +86,10 @@ def log_flow_tensorboard_images(
         # for (x,) in dataloader:
 
         z = flow_model.sample(nsamples)
-        xcap = (
-            ae_model.decoder.predict(z.to(next(ae_model.parameters()).device))
-            .to("cpu")
-            .view(-1, *shape)
-        )
+        if zshape:
+            z = z.view(-1, *zshape)
+        z = z.to(next(ae_model.parameters()).device)
+        xcap = ae_model.decoder.predict(z).to("cpu").view(-1, *xshape)
         writer.add_images(
             tag,
             tv.utils.make_grid(xcap, nrow=nrows).numpy(),

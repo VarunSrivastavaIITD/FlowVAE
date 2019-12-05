@@ -10,7 +10,7 @@ import models
 # from torch.utils.tensorboard import SummaryWriter
 from utils.load_model import save_checkpoint, load_checkpoint
 import argparse
-import skimage
+import skimage.io
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -43,22 +43,22 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--train_ae', type=int, default=10, help="Number of epochs to train autoencoder")
 parser.add_argument('--ae_epoch', type=int, default=10, help="Epoch of AE model to load")
 parser.add_argument('--train_gen', type=int, default=50, help="Number of epochs to train generator")
+parser.add_argument('--gen_epoch', type=int, default=40, help="Epoch of gen model")
 parser.add_argument('--save_images', type=int, default=0, help="Save generated images")
 args = parser.parse_args()
 
-train_loader, test_loader = get_mnist_data(device, reshape=True)
+train_loader, test_loader = get_mnist_data(device, reshape=False)
 num_epochs1 = args.train_ae
 num_epochs2 = args.train_gen
 x_dim = 784
-z_dim = 10
-z0_dim = 10
+z_dim = 392
+z0_dim = 392
 save_path = 'checkpoints/advae'
 
-# ae = models.ConvAutoEncoder(in_channels=1, image_size=(28,28), activation=None).to(device)
-ae = models.AutoEncoder(x_dim, z_dim, n_units=[300,300]).to(device)
-# encoder = ae.encoder
-# decoder = ae.decoder
-generator = models.Encoder(z0_dim, z_dim, [300,300]).to(device)
+ae = models.ConvAutoEncoder(in_channels=1, image_size=(28,28), activation=None).to(device)
+# ae = models.AutoEncoder(x_dim, z_dim, n_units=[300,300]).to(device)
+# generator = models.Encoder(z0_dim, z_dim, [300,300]).to(device)
+generator = models.ConvGenerator(z0_dim, ae.z_dim)
 discriminator = models.Discriminator(z_dim, [20,20]).to(device)
 g_optimizer = optim.Adam(generator.parameters(), lr=1e-2)
 d_optimizer = optim.Adam(discriminator.parameters(), lr=1e-3)
@@ -95,7 +95,7 @@ if args.train_ae:
             np.transpose(np.reshape(images, (10, 10, 28, 28)), (0, 2, 1, 3)),
             (280, 280),
         )
-        plt.imsave("mnist-ae/{}.png".format(e), images_tiled, cmap="gray")
+        plt.imsave("mnist-ae/conv{}.png".format(e), images_tiled, cmap="gray")
         print(
             "Epoch {} : E-D train loss = {:.2e} test loss = {:.2e}".format(
                 e, ed_loss, test_loss
@@ -196,7 +196,7 @@ if args.train_gen:
             np.transpose(np.reshape(images.cpu().detach(), (10, 10, 28, 28)), (0, 2, 1, 3)),
             (280, 280),
         )
-        plt.imsave("mnist-gen/w{}.png".format(e), images_tiled, cmap="gray")
+        plt.imsave("mnist-gen/convw{}.png".format(e), images_tiled, cmap="gray")
 
         if e%10==0:
             checkpoint_dict = {
@@ -209,14 +209,14 @@ if args.train_gen:
             fname = f'gen-disc_{e}'
             save_checkpoint(checkpoint_dict, save_path, fname)
 else:
-    fname = 'gen-disc_40'
+    fname = f'gen-disc_{args.gen_epoch}'
     enc_dec = load_checkpoint(save_path, fname, device)
     generator.load_state_dict(enc_dec['generator'])
 
 if args.save_images:
     with torch.no_grad():
         z = generator(torch.randn(10000, z_dim).to(device))
-        images = torch.round(torch.sigmoid(decoder(z)))
+        images = torch.round(torch.sigmoid(ae.decode(z)))
         images = images.cpu().detach().numpy()*255
         images = np.reshape(images,(-1,28,28)).astype(np.uint8)
 
