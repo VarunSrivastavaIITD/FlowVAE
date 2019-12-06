@@ -1,2 +1,3 @@
-from .vaemodels import Encoder, Decoder, Discriminator, AutoEncoder, ConvAutoEncoder, ConvGenerator
+from .vaemodels import *
 from .flowmodels import Flow, RealNVPLayer, PermLayer
+from .classifier import Classifier

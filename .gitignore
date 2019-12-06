@@ -8,8 +8,9 @@ data/
 normalizingflow/svgs/
 results/
 vaebase/
-checkpoints/
+checkpoints*
 images*
 runs/
 mnist-*/
 *.h5
+**/*.png

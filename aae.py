@@ -9,7 +9,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os
 import models
-from torch.utils.tensorboard import SummaryWriter
 from utils.load_model import save_checkpoint, load_checkpoint
 import argparse
 import skimage.io
@@ -42,41 +41,32 @@ def noisy_soft_labels(labels):
     return noisy_soft
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--ae_mode', default='conv', help="Autoencoder mode : ae or conv")
-parser.add_argument('--train_ae', type=int, default=5, help="Number of epochs to train autoencoder")
-parser.add_argument('--ae_epoch', type=int, default=5, help="Epoch of AE model to load")
-parser.add_argument('--gen_mode', default='w', help="Generator mode : n, w")
-parser.add_argument('--train_gen', type=int, default=40, help="Number of epochs to train generator")
-parser.add_argument('--gen_epoch', type=int, default=40, help="Epoch of gen model")
+parser.add_argument('--ae_mode', default='ae', help="Autoencoder mode : ae or conv")
+parser.add_argument('--train_ae', type=int, default=10, help="Number of epochs to train autoencoder")
+parser.add_argument('--ae_epoch', type=int, default=10, help="Epoch of AE model to load")
+parser.add_argument('--gen_mode', default='n', help="Generator mode : n, w")
 parser.add_argument('--save_images', type=int, default=0, help="Save generated images")
 parser.add_argument('--classify', type=int, default=0, help="Train classifier")
 args = parser.parse_args()
 
 train_loader, test_loader = get_mnist_data(device, reshape=(args.ae_mode=="ae"))
 num_epochs1 = args.train_ae
-num_epochs2 = args.train_gen
 x_dim = 784
 z_dim = 10
 z0_dim = 10
-save_path = 'checkpoints'
+save_path = 'checkpoints_aae'
 
 if args.ae_mode=="ae":
     ae = models.AutoEncoder(x_dim, z_dim, n_units=[300,300]).to(device)
 if args.ae_mode=="conv":
     ae = models.ConvAutoEncoder(in_channels=1, image_size=(28,28), z_dim=z_dim, activation=None).to(device)
-# if args.gen_mode=="n" or args.gen_mode=="w":
-generator = models.Encoder(z0_dim, z_dim, [300,300]).to(device)
-# if args.gen_mode=="convn" or args.gen_mode=="convw":
-#     generator = models.ConvGenerator(z0_dim, ae.z_dim)
 discriminator = models.Discriminator(z_dim, [20,20]).to(device)
-g_optimizer = optim.Adam(generator.parameters(), lr=1e-2)
 d_optimizer = optim.Adam(discriminator.parameters(), lr=1e-3)
 ed_optimizer = optim.Adam(ae.parameters(), lr=1e-3)
 
-writer = SummaryWriter()
 if args.train_ae:
 # First train encoder and decoder
-    print("Training Encoder-Decoder .............")
+    print("Training Encoder-Decoder and Discriminator jointly .............")
     for e in range(1, num_epochs1 + 1):
         for batch in train_loader:
             ae.train()
@@ -93,26 +83,39 @@ if args.train_ae:
             ed_loss = torch.nn.BCEWithLogitsLoss(reduction='none')(input=x_out, target=x_batch).sum(-1).mean()
             ed_loss.backward()
             ed_optimizer.step()
+            ## Train discriminator on real z's and fake z's
+            ## min -log(G(real)) - log(1-G(fake))
+            discriminator.train()
+            d_optimizer.zero_grad()
+            fake_z = ae.encode(x_batch).detach()
+            real_z = torch.randn(batch_size, z0_dim).to(device)
+            d_loss = disc_loss(real_z, fake_z, mode=args.gen_mode)
+            d_loss.backward()
+            d_optimizer.step()
+            ## Train generator (decoder)
+            ## min -log(G(fake))
+            fake_z = ae.encode(x_batch)
+            g_loss = gen_loss(fake_z, mode=args.gen_mode)
+            ed_optimizer.zero_grad()
+            g_loss.backward()
+            ed_optimizer.step()
 
         with torch.no_grad():
-            x_batch = next(iter(test_loader))[0]
             ae.eval()
-            z = ae.encode(x_batch)
+            z = torch.randn(batch_size, z0_dim).to(device)
             x_out = ae.decode(z)
             images = torch.round(torch.sigmoid(x_out).cpu().detach())
-            test_loss = torch.nn.BCEWithLogitsLoss(reduction='none')(input=x_out, target=x_batch).sum(-1).mean()
         images_tiled = np.reshape(
             np.transpose(np.reshape(images, (10, 10, 28, 28)), (0, 2, 1, 3)),
             (280, 280),
         )
-        plt.imsave("images/mnist-ae/{}{}.png".format(args.ae_mode,e), images_tiled, cmap="gray")
+        plt.imsave("images/mnist-aae/{}{}{}.png".format(args.ae_mode,args.gen_mode,e), images_tiled, cmap="gray")
         print(
-            "Epoch {} : E-D train loss = {:.2e} test loss = {:.2e}".format(
-                e, ed_loss, test_loss
+            "Epoch {} : E-D train loss = {:.2e} Disc loss = {:.2e} Gen loss = {:.2e}".format(
+                e, ed_loss, d_loss, g_loss
             )
         )
-        writer.add_scalars('losses', {'train':ed_loss, 'test':test_loss}, e)
-
+        
         if e%5==0:
             checkpoint_dict = {
                 'epoch':e,
@@ -121,16 +124,21 @@ if args.train_ae:
             }
             fname = f'enc-dec_{args.ae_mode}{e}'
             save_checkpoint(checkpoint_dict, save_path, fname)
-#     for k in range(z_dim):
-#         matplotlib.get_backend()
-#         plt.hist(z[:,k].cpu().numpy(), bins=100)
-#         plt.title(f'z_{k} histogram')
-#         plt.savefig(f'plots/{args.ae_mode}_z{k}.png')
+
 else:
     fname = 'enc-dec_'+args.ae_mode+str(args.ae_epoch)
     enc_dec = load_checkpoint(save_path, fname, device)
     ae.load_state_dict(enc_dec['autoencoder'])
 
+def gen_loss(fake_z, mode="n"):
+    if mode[-1]=="n":
+        gen_loss = torch.nn.BCEWithLogitsLoss(reduction='none')(
+            input=discriminator(fake_z), target=torch.ones(batch_size, 1).to(device)
+        ).sum(-1).mean()
+    if mode[-1]=="w":
+        gen_loss = -discriminator(fake_z).mean()
+    return gen_loss
+    
 def disc_loss(real_z, fake_z, mode="n"):
     if mode[-1]=="n":
         real_labels = torch.rand(batch_size,1).to(device)*0.5 + 0.7
@@ -151,92 +159,15 @@ def disc_loss(real_z, fake_z, mode="n"):
         penalty = ((grads[0].reshape(real_z.shape[0],-1).norm(dim=1) - 1)**2).mean()
         return real_loss + fake_loss + 10*penalty
 
-def gen_loss(fake_z, mode="n"):
-    if mode[-1]=="n":
-        gen_loss = torch.nn.BCEWithLogitsLoss(reduction='none')(
-            input=discriminator(fake_z), target=torch.ones(batch_size, 1).to(device)
-        ).sum(-1).mean()
-    if mode[-1]=="w":
-        gen_loss = -discriminator(fake_z).mean()
-    return gen_loss
-
-if args.train_gen:
-    ae.eval()
-    print("Training Discriminator and generator")
-    for e in range(1, num_epochs2 + 1):
-        ## Train discriminator on real z's and fake z's
-        ## min -log(G(real)) - log(1-G(fake))
-        for batch in train_loader:
-            x_batch, y_batch = batch
-            batch_size = x_batch.size()[0]
-            labels = torch.eye(10)[y_batch.cpu()].to(device).float()
-            generator.train()
-            discriminator.train()
-            d_optimizer.zero_grad()
-            real_z = ae.encode(x_batch).detach()
-            fake_z = generator(torch.randn(batch_size, z0_dim).to(device))
-            d_loss = disc_loss(real_z, fake_z, mode=args.gen_mode)
-            d_loss.backward()
-            d_optimizer.step()
-        ## Train generator
-        ## min -log(G(fake))
-        fake_z = generator(torch.randn(batch_size, z0_dim).to(device))
-        g_loss = gen_loss(fake_z, mode=args.gen_mode)
-        g_optimizer.zero_grad()
-        g_loss.backward()
-        g_optimizer.step()
-
-        print(
-            "Epoch {} : Disc loss = {:.2e} Gen loss = {:.2e}".format(
-                e, d_loss, g_loss
-            )
-        )
-
-        disc_grad_norm = 0
-        for p in discriminator.parameters():
-            param_norm = p.grad.data.norm(2)
-            disc_grad_norm += param_norm.item() ** 2
-        gen_grad_norm = 0
-        for p in generator.parameters():
-            param_norm = p.grad.data.norm(2)
-            gen_grad_norm += param_norm.item() ** 2
-        print(f'Disc grad norm {disc_grad_norm}')
-        print(f'Gen grad norm {gen_grad_norm}')
-        
-        generator.eval()
-        with torch.no_grad():
-            z = generator(torch.randn(100, z0_dim).to(device))
-            images = torch.round(torch.sigmoid(ae.decode(z)))
-        images_tiled = np.reshape(
-            np.transpose(np.reshape(images.cpu().detach(), (10, 10, 28, 28)), (0, 2, 1, 3)),
-            (280, 280),
-        )
-        plt.imsave("images/mnist-gen/{}{}{}.png".format(args.ae_mode,args.gen_mode,e), images_tiled, cmap="gray")
-
-        if e%10==0:
-            checkpoint_dict = {
-                'epoch':e,
-                'generator':generator.state_dict(),
-                'discriminator':discriminator.state_dict(),
-                'g_optimizer':g_optimizer.state_dict(),
-                'd_optimizer':d_optimizer.state_dict()
-            }
-            fname = f'gen-disc_{args.ae_mode}{args.gen_mode}{e}'
-            save_checkpoint(checkpoint_dict, save_path, fname)
-else:
-    fname = f'gen-disc_{args.gen_mode}{args.gen_epoch}'
-    enc_dec = load_checkpoint(save_path, fname, device)
-    generator.load_state_dict(enc_dec['generator'])
-
 if args.save_images:
     with torch.no_grad():
-        z = generator(torch.randn(10000, z_dim).to(device))
+        z = torch.randn(10000, z_dim).to(device)
         images = torch.round(torch.sigmoid(ae.decode(z)))
         images = images.cpu().detach().numpy()*255
         images = np.reshape(images,(-1,28,28)).astype(np.uint8)
 
         for i in range(10000):
-            skimage.io.imsave(f'images/advae-{args.ae_mode}{args.gen_mode}-samples/{i}.png', images[i])
+            skimage.io.imsave(f'images/aae-{args.ae_mode}{args.gen_mode}-samples/{i}.png', images[i])
             
 if args.classify:
     print("Training classifier .....")

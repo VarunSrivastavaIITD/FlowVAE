@@ -8,8 +8,13 @@ import time
 
 import keras
 import keras.backend as K
+from tensorflow_gan.python.eval.classifier_metrics import diagonal_only_frechet_classifier_distance_from_activations
+from tensorflow import convert_to_tensor
+# import tensorflow.compat.v1.keras as keras
+# import tensorflow.compat.v1.keras.backend as K
 import numpy as np
 from keras.models import Model
+# from tensorflow.compat.v1.keras.models import Model
 from scipy.special import expit
 from skimage.io import imread_collection
 
@@ -34,8 +39,8 @@ def compute_real_fcd(X_real_train, classifier):
     gen_act = classifier.predict(net_generated_data)
 
     print("Calculating FCD for real data")
-    fcd_tensor = K.tf.contrib.gan.eval.diagonal_only_frechet_classifier_distance_from_activations(
-        K.tf.convert_to_tensor(real_act), K.tf.convert_to_tensor(gen_act)
+    fcd_tensor = diagonal_only_frechet_classifier_distance_from_activations(
+        convert_to_tensor(real_act), convert_to_tensor(gen_act)
     )
 
     sess = K.get_session()
@@ -101,8 +106,8 @@ def main(image_dir="./", net_loc="../cnn_mnist_10c.h5"):
     gen_act = classifier.predict(net_generated_data)
 
     print("Calculating FCD for generated data")
-    fcd_tensor = K.tf.contrib.gan.eval.diagonal_only_frechet_classifier_distance_from_activations(
-        K.tf.convert_to_tensor(real_act), K.tf.convert_to_tensor(gen_act)
+    fcd_tensor = diagonal_only_frechet_classifier_distance_from_activations(
+        convert_to_tensor(real_act), convert_to_tensor(gen_act)
     )
 
     sess = K.get_session()
@@ -143,8 +148,8 @@ def main(image_dir="./", net_loc="../cnn_mnist_10c.h5"):
         gen_act = classifier.predict(net_generated_data)
 
         print("Calculating FCD for generated data")
-        fcd_tensor = K.tf.contrib.gan.eval.diagonal_only_frechet_classifier_distance_from_activations(
-            K.tf.convert_to_tensor(real_act), K.tf.convert_to_tensor(gen_act)
+        fcd_tensor = diagonal_only_frechet_classifier_distance_from_activations(
+            convert_to_tensor(real_act), convert_to_tensor(gen_act)
         )
 
         sess = K.get_session()
