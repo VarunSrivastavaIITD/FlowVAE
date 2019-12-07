@@ -26,4 +26,3 @@ def load_checkpoint(save_path, fname, device="cpu"):
     fname = Path(fname)
     fullpath = save_path.joinpath(fname)
     return torch.load(fullpath.as_posix(), map_location=device)
-

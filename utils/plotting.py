@@ -44,6 +44,7 @@ def log_ae_tensorboard_images(
     xshape=(1, 28, 28),
     nrows=None,
     dataformat="NHW",
+    round_preds=True,
 ):
     model.eval()
     with torch.no_grad():
@@ -55,6 +56,8 @@ def log_ae_tensorboard_images(
                 .to("cpu")
                 .view(-1, *xshape)
             )
+            if round_preds:
+                xcap = torch.round(xcap)
             writer.add_image(
                 tag,
                 tv.utils.make_grid(xcap, nrow=nrows).numpy(),
@@ -76,6 +79,7 @@ def log_flow_tensorboard_images(
     zshape=None,
     nsamples=100,
     dataformat="NHW",
+    round_preds=True,
 ):
     flow_model.eval()
     ae_model.eval()
@@ -90,6 +94,8 @@ def log_flow_tensorboard_images(
             z = z.view(-1, *zshape)
         z = z.to(next(ae_model.parameters()).device)
         xcap = ae_model.decoder.predict(z).to("cpu").view(-1, *xshape)
+        if round_preds:
+            xcap = torch.round(xcap)
         writer.add_images(
             tag,
             tv.utils.make_grid(xcap, nrow=nrows).numpy(),
@@ -98,4 +104,3 @@ def log_flow_tensorboard_images(
         )
         # writer.add_images(tag, xcap, global_step=epoch, dataformats=dataformat)
     writer.flush()
-

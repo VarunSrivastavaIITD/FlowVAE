@@ -239,7 +239,8 @@ class OneByOneConv(nn.Module):
         self.dim = dim
         W, _ = sp.linalg.qr(np.random.randn(dim, dim))
         P, L, U = sp.linalg.lu(W)
-        self.P = torch.tensor(P, dtype=torch.float)
+        # self.P = torch.tensor(P, dtype=torch.float)
+        self.register_buffer("P", torch.tensor(P, dtype=torch.float))
         self.L = nn.Parameter(torch.tensor(L, dtype=torch.float))
         self.S = nn.Parameter(torch.tensor(np.diag(U), dtype=torch.float))
         self.U = nn.Parameter(
@@ -248,15 +249,19 @@ class OneByOneConv(nn.Module):
         self.W_inv = None
 
     def forward(self, x):
-        L = torch.tril(self.L, diagonal=-1) + torch.diag(torch.ones(self.dim))
+        L = torch.tril(self.L, diagonal=-1) + torch.diag(
+            torch.ones(self.dim, device=x.device)
+        )
         U = torch.triu(self.U, diagonal=1)
         z = x @ self.P @ L @ (U + torch.diag(self.S))
         log_det = torch.sum(torch.log(torch.abs(self.S)))
         return z, log_det
 
     def backward(self, z):
-        if not self.W_inv:
-            L = torch.tril(self.L, diagonal=-1) + torch.diag(torch.ones(self.dim))
+        if self.W_inv is None:
+            L = torch.tril(self.L, diagonal=-1) + torch.diag(
+                torch.ones(self.dim, device=z.device)
+            )
             U = torch.triu(self.U, diagonal=1)
             W = self.P @ L @ (U + torch.diag(self.S))
             self.W_inv = torch.inverse(W)
@@ -341,7 +346,7 @@ class NSF_CL(nn.Module):
         self.f2 = base_network(dim // 2, (3 * K - 1) * dim // 2, hidden_dim)
 
     def forward(self, x):
-        log_det = torch.zeros(x.shape[0])
+        log_det = torch.zeros(x.shape[0], device=x.device)
         lower, upper = x[:, : self.dim // 2], x[:, self.dim // 2 :]
         out = self.f1(lower).reshape(-1, self.dim // 2, 3 * self.K - 1)
         W, H, D = torch.split(out, self.K, dim=2)
@@ -360,7 +365,7 @@ class NSF_CL(nn.Module):
         return torch.cat([lower, upper], dim=1), log_det
 
     def backward(self, z):
-        log_det = torch.zeros(z.shape[0])
+        log_det = torch.zeros(z.shape[0], device=z.device)
         lower, upper = z[:, : self.dim // 2], z[:, self.dim // 2 :]
         out = self.f2(upper).reshape(-1, self.dim // 2, 3 * self.K - 1)
         W, H, D = torch.split(out, self.K, dim=2)

@@ -80,7 +80,7 @@ def load_cifar10(args, **kwargs):
         tv.transforms.ToTensor(),
         # tv.transforms.Normalize((0.5,), (0.5,)),
     ]
-    args.xdim = (32, 32)
+    args.xdim = (3, 32, 32)
     if flatten:
         transforms_list.append(tv.transforms.Lambda(lambda x: x.view(-1)))
         args.xdim = (1024,)

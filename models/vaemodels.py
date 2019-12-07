@@ -6,6 +6,7 @@ from torch.nn import functional as F
 from . import vae_utils as ut
 from . import vae_nn
 
+
 class Reshape(nn.Module):
     def __init__(self, *args):
         super(Reshape, self).__init__()
@@ -13,6 +14,7 @@ class Reshape(nn.Module):
 
     def forward(self, x):
         return x.view(-1,*self.shape)
+
 
 class Encoder(nn.Module):
     """docstring for Encoder"""
@@ -33,6 +35,7 @@ class Encoder(nn.Module):
     def forward(self, x):
         return self.net(x)
 
+
 class ConvGenerator(nn.Module):
     def __init__(self, z_dim, x_dim):
         super().__init__()
@@ -51,8 +54,9 @@ class ConvGenerator(nn.Module):
         )
         self.x_dim = x_dim
 
-    def forward(self,z):
-        return self.net(z).view(-1,np.prod(self.x_dim))
+    def forward(self, z):
+        return self.net(z).view(-1, np.prod(self.x_dim))
+
 
 class Decoder(nn.Module):
     def __init__(self, z_dim, x_dim, n_units, x_type="binary"):
@@ -104,10 +108,10 @@ class AutoEncoder(nn.Module):
         x = self.decoder.predict(x)
         return x
 
-    def encode(self,x):
+    def encode(self, x):
         return self.encoder(x)
 
-    def decode(self,z):
+    def decode(self, z):
         return self.decoder(z)
 
 
@@ -153,9 +157,10 @@ class ConvAutoEncoder(nn.Module):
             nn.ReLU(True),
             nn.Conv2d(in_channels=16, out_channels=in_channels, kernel_size=1, stride=1),  # b, 3, 32, 32
         )
-        if activation!=None:
+        if activation != None:
             self.decoder.add_module("activation", activation)
-        self.z_dim = z_dim#(8,(image_size[0]//4),(image_size[1]//4))
+        self.decoder.predict = self.decoder.forward
+        self.z_dim = (8, (image_size[0] // 4), (image_size[1] // 4))
 
     def forward(self, x):
         x = self.encoder(x)
@@ -164,10 +169,10 @@ class ConvAutoEncoder(nn.Module):
 
     def encode(self, x):
         z = self.encoder(x)
-        return z#.view(-1,np.prod(self.z_dim))
+        return z.view(-1, np.prod(self.z_dim))
 
-    def decode(self,z):
-        x = self.decoder(z)#.view(-1,*self.z_dim))
+    def decode(self, z):
+        x = self.decoder(z.view(-1, *self.z_dim))
         return x
 
     def predict(self, x):

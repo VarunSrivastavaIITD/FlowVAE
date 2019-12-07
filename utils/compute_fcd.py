@@ -7,6 +7,7 @@ import sys
 import time
 
 import keras
+import tensorflow as tf
 import keras.backend as K
 from tensorflow_gan.python.eval.classifier_metrics import diagonal_only_frechet_classifier_distance_from_activations
 from tensorflow import convert_to_tensor
@@ -17,6 +18,18 @@ from keras.models import Model
 # from tensorflow.compat.v1.keras.models import Model
 from scipy.special import expit
 from skimage.io import imread_collection
+
+# import tensorflow.contrib.gan as tfg
+import tensorflow_gan.python.eval.classifier_metrics as cm
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
+
+# diagonal_only_frechet_classifier_distance_from_activations = (
+#     tfg.eval.diagonal_only_frechet_classifier_distance_from_activations
+# )
+diagonal_only_frechet_classifier_distance_from_activations = (
+    cm.diagonal_only_frechet_classifier_distance_from_activations
+)
 
 
 def keras_extract_mnist_digits():
@@ -40,7 +53,7 @@ def compute_real_fcd(X_real_train, classifier):
 
     print("Calculating FCD for real data")
     fcd_tensor = diagonal_only_frechet_classifier_distance_from_activations(
-        convert_to_tensor(real_act), convert_to_tensor(gen_act)
+        tf.convert_to_tensor(real_act), tf.convert_to_tensor(gen_act)
     )
 
     sess = K.get_session()
@@ -51,8 +64,16 @@ def compute_real_fcd(X_real_train, classifier):
 
 
 def main(image_dir="./", net_loc="../cnn_mnist_10c.h5"):
+    config = ConfigProto()
+    config.gpu_options.allow_growth = True
+    session = InteractiveSession(config=config)
+    K.set_session(session)
+
+    # from ptpdb import set_trace
+
+    # set_trace()
     # imcollection = np.array(imread_collection(image_dir))[:, :, :, 0]
-    imcollection = np.array(imread_collection(image_dir))
+    imcollection = np.array(imread_collection(f"{image_dir}/*.png"))
 
     net_generated_data = np.expand_dims(imcollection, 3)
 
@@ -107,14 +128,12 @@ def main(image_dir="./", net_loc="../cnn_mnist_10c.h5"):
 
     print("Calculating FCD for generated data")
     fcd_tensor = diagonal_only_frechet_classifier_distance_from_activations(
-        convert_to_tensor(real_act), convert_to_tensor(gen_act)
+        tf.convert_to_tensor(real_act), tf.convert_to_tensor(gen_act)
     )
 
-    sess = K.get_session()
-
-    fcd = sess.run(fcd_tensor)
+    fcd = session.run(fcd_tensor)
     print(f"fcd = {fcd:.3g}")
-    sess.close()
+    session.close()
     sys.exit(0)
 
     fcd_iters = 2
@@ -149,7 +168,7 @@ def main(image_dir="./", net_loc="../cnn_mnist_10c.h5"):
 
         print("Calculating FCD for generated data")
         fcd_tensor = diagonal_only_frechet_classifier_distance_from_activations(
-            convert_to_tensor(real_act), convert_to_tensor(gen_act)
+            tf.convert_to_tensor(real_act), tf.convert_to_tensor(gen_act)
         )
 
         sess = K.get_session()
