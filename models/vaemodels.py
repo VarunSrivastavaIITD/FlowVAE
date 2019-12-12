@@ -37,25 +37,28 @@ class Encoder(nn.Module):
 
 
 class ConvGenerator(nn.Module):
-    def __init__(self, z_dim, x_dim):
+    def __init__(self, z0_dim, z_dim):
         super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(z_dim,z_dim),
-            nn.BatchNorm1d(z_dim),
+        self.net = nn.Sequential( #64,1,1
+            Reshape(z0_dim,1,1),
+            nn.ConvTranspose2d(z0_dim, 48, kernel_size=2, stride=1, padding=0), #48,2,2
+            nn.BatchNorm2d(48),
             nn.ELU(),
-            nn.Linear(z_dim, np.prod(x_dim)),
-            nn.BatchNorm1d(np.prod(x_dim)),
+            nn.ConvTranspose2d(48, 32, kernel_size=4, stride=2, padding=1), # 32,4,4
+            nn.BatchNorm2d(32),
             nn.ELU(),
-            Reshape(*x_dim),
-            nn.Conv2d(x_dim[0], x_dim[0], kernel_size=3, padding=1),
-            nn.BatchNorm2d(x_dim[0]),
+            nn.ConvTranspose2d(32, 24, kernel_size=4, stride=2, padding=1), # 24,8,8
+            nn.BatchNorm2d(24),
             nn.ELU(),
-            nn.Conv2d(x_dim[0], x_dim[0], kernel_size=3, padding=1)
+            nn.ConvTranspose2d(24, 16, kernel_size=4, stride=2, padding=1), #16,16,16
+            nn.BatchNorm2d(16),
+            nn.ELU(),
+            nn.Conv2d(16, z_dim[0], kernel_size=4, stride=2, padding=z_dim[-1]-7) #z_dim[0],8,8
         )
-        self.x_dim = x_dim
+        self.z_dim = z_dim
 
     def forward(self, z):
-        return self.net(z).view(-1, np.prod(self.x_dim))
+        return self.net(z)#.view(-1, np.prod(self.z_dim))
 
 
 class Decoder(nn.Module):
@@ -81,7 +84,7 @@ class Decoder(nn.Module):
 
 
 class AutoEncoder(nn.Module):
-    def __init__(self, x_dim, z_dim, n_units, output_dist="binary"):
+    def __init__(self, x_dim, z_dim, n_units, output_dist="binary", sup=False):
         super().__init__()
         x_dim = np.squeeze(x_dim)
         z_dim = np.squeeze(z_dim)
@@ -94,9 +97,12 @@ class AutoEncoder(nn.Module):
         z_dim = z_dim.item()
         x_dim = int(x_dim)
         z_dim = int(z_dim)
-        self.encoder = Encoder(x_dim, z_dim, n_units)
+        if sup: self.encoder = Encoder(x_dim+10, z_dim, n_units)
+        else: self.encoder = Encoder(x_dim, z_dim, n_units)
         if output_dist.lower() == "binary":
-            self.decoder = Decoder(z_dim, x_dim, n_units, "binary")
+            if sup:
+                self.decoder = Decoder(z_dim+10, x_dim, n_units, "binary")
+            else: self.decoder = Decoder(z_dim, x_dim, n_units, "binary")
 
     def forward(self, x):
         z = self.encoder(x)
@@ -116,51 +122,47 @@ class AutoEncoder(nn.Module):
 
 
 class ConvAutoEncoder(nn.Module):
-    def __init__(self, in_channels=3, image_size=(32,32), z_dim=20, activation=nn.Sigmoid()):
+    def __init__(self, in_channels=3, image_size=(32,32), activation=nn.Sigmoid()):
         super().__init__()
         self.encoder = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=16, kernel_size=3, stride=2, padding=1),  # b, 16, 16, 16
-            nn.BatchNorm2d(num_features=16),
+            nn.Conv2d(in_channels=in_channels, out_channels=8, kernel_size=3, stride=2, padding=1),  # b, 16, 16, 16
+            nn.BatchNorm2d(num_features=8),
             nn.ReLU(inplace=True),
             nn.Conv2d(
-                in_channels=16, out_channels=8, kernel_size=3, stride=2, padding=1
-            ),  # b, 8, 8, 8
-            nn.BatchNorm2d(num_features=8),
-            nn.ReLU(),
-            Reshape(8*(image_size[0]//4)*(image_size[1]//4)),
-            nn.Linear(8*(image_size[0]//4)*(image_size[1]//4), z_dim)
+                in_channels=8, out_channels=4, kernel_size=3, stride=2, padding=1
+            )  # b, 8, 8, 8
         )
         self.decoder = nn.Sequential(
-            nn.Linear(z_dim, 8*(image_size[0]//4)*(image_size[1]//4)),
-            nn.BatchNorm1d(8*(image_size[0]//4)*(image_size[1]//4)),
-            nn.ReLU(),
-            Reshape(8,(image_size[0]//4),(image_size[1]//4)),
+#             nn.Linear(z_dim, 8*(image_size[0]//4)*(image_size[1]//4)),
+#             nn.BatchNorm1d(8*(image_size[0]//4)*(image_size[1]//4)),
+#             nn.ReLU(),
+#             Reshape(8,(image_size[0]//4),(image_size[1]//4)),
             nn.ConvTranspose2d(
-                in_channels=8,
-                out_channels=16,
+                in_channels=4,
+                out_channels=8,
                 kernel_size=3,
                 stride=2,
                 padding=1,
                 output_padding=1,
             ),  # b, 16, 16, 16
-            nn.BatchNorm2d(num_features=16),
+            nn.BatchNorm2d(num_features=8),
             nn.ReLU(True),
             nn.ConvTranspose2d(
-                in_channels=16,
-                out_channels=16,
+                in_channels=8,
+                out_channels=8,
                 kernel_size=3,
                 stride=2,
                 padding=1,
                 output_padding=1,
             ),  # b, 16, 32, 32
-            nn.BatchNorm2d(num_features=16),
+            nn.BatchNorm2d(num_features=8),
             nn.ReLU(True),
-            nn.Conv2d(in_channels=16, out_channels=in_channels, kernel_size=1, stride=1),  # b, 3, 32, 32
+            nn.Conv2d(in_channels=8, out_channels=in_channels, kernel_size=1, stride=1),  # b, 3, 32, 32
         )
         if activation != None:
             self.decoder.add_module("activation", activation)
         self.decoder.predict = self.decoder.forward
-        self.z_dim = (8, (image_size[0] // 4), (image_size[1] // 4))
+        self.z_dim = (4, (image_size[0] // 4), (image_size[1] // 4))
 
     def forward(self, x):
         x = self.encoder(x)
@@ -169,10 +171,10 @@ class ConvAutoEncoder(nn.Module):
 
     def encode(self, x):
         z = self.encoder(x)
-        return z.view(-1, np.prod(self.z_dim))
+        return z#.view(-1, np.prod(self.z_dim))
 
     def decode(self, z):
-        x = self.decoder(z.view(-1, *self.z_dim))
+        x = self.decoder(z)#.view(-1, *self.z_dim))
         return x
 
     def predict(self, x):
@@ -194,8 +196,24 @@ class Discriminator(nn.Module):
     def forward(self, z):
         return self.net(z)
 
+class ConvDiscriminator(nn.Module):
+    def __init__(self, z_dim):
+        super().__init__()
+        self.net = nn.Sequential( #8,8,8
+            nn.Conv2d(z_dim[0], z_dim[0]*2, kernel_size=z_dim[-1]-4, stride=2, padding=1), #16,4,4
+            nn.ELU(),
+            nn.Conv2d(z_dim[0]*2, z_dim[0]*4, kernel_size=3, stride=1, padding=0), #32,4,4
+            nn.ELU(),
+            nn.Conv2d(z_dim[0]*4, z_dim[0]*8, kernel_size=4, stride=2, padding=1), #32,2,2
+            nn.ELU(),
+            Reshape(32),
+            nn.Linear(32,1)
+        )
+    def forward(self, z):
+        return self.net(z)
+
 class VAE(nn.Module):
-    def __init__(self, nn='v1', name='vae', z_dim=2):
+    def __init__(self, nn='v1', name='vae', z_dim=2, sup=False):
         super().__init__()
         self.name = name
         self.z_dim = z_dim
@@ -203,15 +221,15 @@ class VAE(nn.Module):
         # nn here refers to the specific architecture file found in
         # codebase/models/nns/*.py
 #         nn = getattr(nns, nn)
-        self.enc = vae_nn.Encoder(self.z_dim)
-        self.dec = vae_nn.Decoder(self.z_dim)
+        self.enc = vae_nn.Encoder(self.z_dim, 10*int(sup))
+        self.dec = vae_nn.Decoder(self.z_dim, 10*int(sup))
 
         # Set prior as fixed parameter attached to Module
         self.z_prior_m = torch.nn.Parameter(torch.zeros(1), requires_grad=False)
         self.z_prior_v = torch.nn.Parameter(torch.ones(1), requires_grad=False)
         self.z_prior = (self.z_prior_m, self.z_prior_v)
 
-    def negative_elbo_bound(self, x):
+    def negative_elbo_bound(self, x, y=None):
         """
         Computes the Evidence Lower Bound, KL and, Reconstruction costs
 
@@ -231,15 +249,16 @@ class VAE(nn.Module):
         #
         # Outputs should all be scalar
         ################################################################################
-        m,v = self.enc.encode(x)
+        m,v = self.enc.encode(x,y)
         z_batch = ut.sample_gaussian(m,v)
-        rec = - torch.mean(ut.log_bernoulli_with_logits(x, logits=self.dec.decode(z_batch)))
+        rec = - torch.mean(ut.log_bernoulli_with_logits(x, logits=self.dec.decode(z_batch,y)))
         kl = torch.mean(ut.kl_normal(m,v,torch.zeros_like(m),torch.ones_like(v)))
         nelbo = kl + rec
         ################################################################################
         # End of code modification
         ################################################################################
         return nelbo, kl, rec
+        
 
     def negative_iwae_bound(self, x, iw):
         """
@@ -278,8 +297,8 @@ class VAE(nn.Module):
         ################################################################################
         return niwae, kl, rec
 
-    def loss(self, x):
-        nelbo, kl, rec = self.negative_elbo_bound(x)
+    def loss(self, x, y=None):
+        nelbo, kl, rec = self.negative_elbo_bound(x,y)
         loss = nelbo
 
         summaries = dict((
@@ -295,8 +314,8 @@ class VAE(nn.Module):
         z = self.sample_z(batch)
         return self.compute_sigmoid_given(z)
 
-    def compute_sigmoid_given(self, z):
-        logits = self.dec.decode(z)
+    def compute_sigmoid_given(self, z, y=None):
+        logits = self.dec.decode(z,y)
         return torch.sigmoid(logits)
 
     def sample_z(self, batch):
@@ -308,5 +327,10 @@ class VAE(nn.Module):
         z = self.sample_z(batch)
         return self.sample_x_given(z)
 
-    def sample_x_given(self, z):
-        return torch.bernoulli(self.compute_sigmoid_given(z))
+    def sample_x_sup(self, batch=10):
+        z = self.sample_z(10).repeat(10,1)
+        y = torch.eye(10)[torch.arange(10)].repeat_interleave(10,0)
+        return self.sample_x_given(z,y)
+        
+    def sample_x_given(self, z, y=None):
+        return torch.bernoulli(self.compute_sigmoid_given(z,y))

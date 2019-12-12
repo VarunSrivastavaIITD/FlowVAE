@@ -309,15 +309,17 @@ def reset_weights(m):
         pass
 
 
-def get_mnist_data(device, use_test_subset=True):
+def get_mnist_data(dataset, device, use_test_subset=True):
+    if dataset=='mnist': DS = datasets.MNIST
+    if dataset=='fmnist': DS = datasets.FashionMNIST
     preprocess = transforms.ToTensor()
     train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('data', train=True, download=True, transform=preprocess),
-        batch_size=97,  # Using a weird batch size to prevent students from hard-coding
+        DS('data', train=True, download=True, transform=preprocess),
+        batch_size=100,
         shuffle=True)
     test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('data', train=False, download=True, transform=preprocess),
-        batch_size=97,
+        DS('data', train=False, download=True, transform=preprocess),
+        batch_size=100,
         shuffle=True)
 
     # Create pre-processed training and test sets

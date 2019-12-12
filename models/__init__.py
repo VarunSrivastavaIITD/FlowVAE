@@ -5,6 +5,7 @@ from .vaemodels import (
     AutoEncoder,
     ConvAutoEncoder,
     ConvGenerator,
+    ConvDiscriminator,
     VAE
 )
 from .flowmodels import Flow, RealNVPLayer, PermLayer

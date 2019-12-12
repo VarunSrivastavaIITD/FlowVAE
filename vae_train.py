@@ -8,6 +8,7 @@ from models import vae_utils as ut
 from torch import nn, optim
 from torch.nn import functional as F
 from torchvision.utils import save_image
+import matplotlib.pyplot as plt
 
 def train(model, train_loader, labeled_subset, device, tqdm, writer,
           iter_max=np.inf, iter_save=np.inf,
@@ -75,3 +76,8 @@ def train(model, train_loader, labeled_subset, device, tqdm, writer,
 
                 if i == iter_max:
                     return
+                
+                if i % 600 == 0:
+                    images = model.sample_x_sup()
+                    images_tiled = np.reshape(np.transpose(np.reshape(images.cpu().detach(), (10,10,28,28)), (0,2,1,3)),(280,280))
+                    plt.imsave("images/mnist-vae/"+str(i//600)+".png", images_tiled, cmap="gray")

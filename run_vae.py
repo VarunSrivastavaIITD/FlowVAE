@@ -9,9 +9,11 @@ from vae_train import train
 from pprint import pprint
 from torchvision import datasets, transforms
 import matplotlib.pyplot as plt
-import skimage
+import skimage.io
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--dataset',             default="mnist", help="Which dataset?")
+parser.add_argument('--sup_mode',             default="none", help="Supervised or not")
 parser.add_argument('--z',         type=int, default=10,    help="Number of latent dimensions")
 parser.add_argument('--iter_max',  type=int, default=20000, help="Number of training iterations")
 parser.add_argument('--iter_save', type=int, default=10000, help="Save model every n iterations")
@@ -29,8 +31,8 @@ print('Model name:', model_name)
 
 # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 device = 'cpu'
-train_loader, labeled_subset, _ = ut.get_mnist_data(device, use_test_subset=True)
-vae = VAE(z_dim=args.z, name=model_name).to(device)
+train_loader, labeled_subset, _ = ut.get_mnist_data(args.dataset, device, use_test_subset=True)
+vae = VAE(z_dim=args.z, name=model_name, sup=(args.sup_mode=="fullsup")).to(device)
 
 if args.train:
     writer = ut.prepare_writer(model_name, overwrite_existing=True)
@@ -41,7 +43,8 @@ if args.train:
           tqdm=tqdm.tqdm,
           writer=writer,
           iter_max=args.iter_max,
-          iter_save=args.iter_save)
+          iter_save=args.iter_save,
+          y_status=args.sup_mode)
     ut.evaluate_lower_bound(vae, labeled_subset, run_iwae=args.train == 2)
 
 else:
